@@ -12,7 +12,8 @@
 │   │── CMakeLists.txt          // 编译工程文件
 │   │── data_utils.h            // 数据读入写出函数
 │   │── main.cpp                // 主函数，调用算子的应用程序，含CPU域及NPU域调用
-│   ├── run.sh                  // 编译运行算子的脚本
+│   ├── run_cpu.sh                  // 编译并在cpu域运行算子的脚本
+│   ├── run_sim.sh                  // 编译并在npu仿真运行算子的脚本
 ``` 
 
 
@@ -20,12 +21,12 @@
 如果将该样例工程替换为自己的算子实现，需要修改以下内容
 1.add_custom.cpp为核函数实现，整个文件都要替换成新算子实现
 此外，在以下文件中搜索 “迁移算子修改点”
-2.run.sh
+2.run_cpu.sh/run_sim.sh
 根据实际算子名，修改FILE_NAME属性
 3.scripts/gen_data.py
 需自定义生成输入数据的内容（Shape/数据类型/算子的输入参数数量）
 4.main.cpp
-调用add_custom.cpp中的符号
+调用add_custom.cpp中的符号，如果是微指令调用add_custom_micro.cpp中的符号
 读数据的逻辑
 
 ## 代码实现介绍
@@ -60,13 +61,15 @@
 - 样例执行
 
   ```
-  bash run.sh -r [RUN_MODE] -v  [SOC_VERSION] 
+  bash run_cpu.sh -v  [SOC_VERSION]
+  bash run_sim.sh -v  [SOC_VERSION] 
   ```
   - RUN_MODE：编译方式，sim（NPU仿真）。
-  - SOC_VERSION：KirinX90 或者 Kirin9030。
+  - SOC_VERSION：KirinX90, Kirin9020, Kirin9030, Kirin9050。
 
   示例如下。
   ```
-  bash run.sh -r sim -v KirinX90
+  bash run_cpu.sh -v KirinX90
+  bash run_sim.sh -v KirinX90
   ```   
 

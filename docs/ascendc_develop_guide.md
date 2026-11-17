@@ -25,7 +25,7 @@ Ascend C是CANN针对算子开发场景推出的编程语言，遵循C和C++标�
 
 ## 使用须知
 
-当前AscendC支持的产品型号为：KirinX90/Kirin9030系列处理器产品。
+当前AscendC支持的产品型号为：KirinX90/Kirin9020/Kirin9030/Kirin9050系列处理器产品。
 
 
 # 环境准备
@@ -56,10 +56,9 @@ Ascend C是CANN针对算子开发场景推出的编程语言，遵循C和C++标�
 直接参考 ops/ascendc/src/add_custom工程
 
 ```
-│──build.sh
+│──build_and_install.sh
 │──CMakeLists.txt
 │──CMakePresets.json
-│──run.sh
 │
 ├─framework
 │  │──CMakeLists.txt
@@ -624,7 +623,7 @@ if (shape_tensor->GetDataType() == ge::DT_INT32) {
 | 标准自定义算子工程场景(customize) | 该场景下，开发者需按照“工程创建-&gt;算子实现-&gt;编译部署-&gt;算子调用”的流程完成算子开发和调用。基于工程代码框架完成算子核函数的开发和Tiling实现，通过工程编译脚本完成算子编译部署。Tiling开发基于CANN提供的编程框架进行，后续更易于借助框架功能实现单算子API调用、图模式算子调用等。 |
 | 输入数据和标杆数据 | 使用AscendC调测工具时，需要提供算子输入数据及标杆数据（Golden数据）。<br/>- 输入数据：固定shape算子运行时的输入数据，bin格式。<br/>- 标杆数据：根据输入数据计算出来的真值数据，用于与输出数据进行精度比对，bin格式。 |
 | 算子json配置文件 | 用于描述算子的输入、输出及属性信息，以json格式存储。该文件中的参数个数、顺序、数据类型等信息，必须与算子原型相匹配。<br/>工具支持以下配置格式：<br/>[固定输入/输出顺序的算子json配置](#固定输入输出顺序的算子json配置)：其输入/输出参数信息单独在inputs、outputs、attrs配置项中设置，不支持输入/输出参数交叉设置。 |
-| Tiling | （Kirin当前版本暂不支持Tiling调试）描述Kirin AI处理器上算子的输入/输出数据切分、分块计算、多核并行等策略，主要是为了满足片上存储限制和计算pipeline的需求，最大化计算并行性和数据局部性（data locality 或 data reuse），从而发挥硬件的极致性能。 |
+| Tiling | 描述Kirin AI处理器上算子的输入/输出数据切分、分块计算、多核并行等策略，主要是为了满足片上存储限制和计算pipeline的需求，最大化计算并行性和数据局部性（data locality 或 data reuse），从而发挥硬件的极致性能。 |
 | CAModel | CAModel(Cycle Accurate Model)仿真器主要用于生成算子性能仿真流水数据。 |
 | CCEC | CCEC(Cube-based Computing Engine Compiler)工具基于毕昇编译器，通过自动拼接编译选项构建的一种编译方式。其中，毕昇编译器是一款专为达芬奇SOC设计的编译器，支持异构编程扩展，可将开发者编写的昇腾算子代码编译成二进制可执行文件和动态库等形式，详细介绍请参考《[毕昇编译器使用指南](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/index/index.html)》。 |
 | CCEprint/Intrilog | intrilog：落盘算子运行中的CCE指令流。 |
@@ -658,7 +657,7 @@ def gen_data_simple():
 3. 通过命令行方式发起算子调测。
     目前工具支持的算子调测能力如下，请按需选择：
 
-    - Tiling调测：对Tiling函数调测，生成Tiling结果，验证Tiling函数功能。（Kirin暂不支持）
+    - Tiling调测：对Tiling函数调测，生成Tiling结果，验证Tiling函数功能。
     - 精度调试：通过NPU仿真进行核函数精度调试，支持自动精度比对、printf/PRINTF/DumpTensor/assert打印等功能。
     - 性能调优：通过NPU仿真获取算子执行circle数，评估算子性能。
 
@@ -684,7 +683,7 @@ def gen_data_simple():
 
 ## NPU仿真模式下的精度校验与性能采集分析
 基于NPU域算子的调用接口编写的算子程序，通过毕昇编译器编译后生成可执行程序，运行可执行程序，可以完成算子NPU域的运行验证。使用算子调优工具运行NPU模式下生成的可执行文件从而采集Ascend C算子在AI处理器上执行的性能数据，进行性能精细调优。
-当前，Kirin支持的芯片型号为KirinX90, Kirin9030，支持分析的类型为为仿真器，支持的场景为Kernel直调场景，关于Kernel直调场景的详情请参考 [Kernel直调说明](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.htmld)。
+当前，Kirin支持的芯片型号为KirinX90, Kirin9020, Kirin9030, Kirin9050，支持分析的类型为为仿真器，支持的场景为Kernel直调场景，关于Kernel直调场景的详情请参考 [Kernel直调说明](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.htmld)。
 ### 精度校验
 样例参考本仓 ops/ascendc/AddKernelInvocation/ 目录
 该工程的编译、执行参考 [样例工程下的README](../ops/ascendc/AddKernelInvocation/README.md)
@@ -692,31 +691,31 @@ def gen_data_simple():
 样例工程的run脚本会自动编译算子直调程序的二进制，并结合ops/ascendc/AddKernelInvocation/scripts目录下的gen_data.py、verify_result.py进行精度校验
 
 ### 仿真性能流水图
-在上述步骤编译获得 add_sim二进制之后，执行以下命令，可以使用msprof工具生成仿真模式下的算子性能流水图
+在上述步骤编译获得 add_sim二进制之后，执行以下命令，可以使用msopprof工具生成仿真模式下的算子性能流水图
 ```shell
-msprof op simulator --soc-version=KirinX90 --output=XXX ./add_sim
+msopprof simulator --soc-version=KirinX90 --output=XXX ./add_sim
 ```
-msprof op simulator可选参数说明
+msopprof simulator可选参数说明
 |字段名|字段含义 |是否必选   |
 |------|------|------|
-|--application|建议使用msprof op simulator --soc-version=Kirinxxyy [msprof op simulator参数] ./app进行拉取，其中app为用户指定的可执行文件，如果app未指定路径，默认为使用当前路径。|是，--application 和 --export二选一|
+|--application|建议使用msopprof simulator --soc-version=Kirinxxyy [msopprof simulator参数] ./app进行拉取，其中app为用户指定的可执行文件，如果app未指定路径，默认为使用当前路径。|是，--application 和 --export二选一|
 |--export|(不推荐使用)指定包含单算子仿真性能结果文件夹，直接对该仿真结果进行解析，并生成单算子单核或多核的指令流水图。；与./app不共存，更推荐使用 ./app|是，--application 和 --export二选一|
-|--soc-version|KirinX90 或者 Kirin9030|是|
+|--soc-version|KirinX90, Kirin9020, Kirin9030, Kirin9050|是|
 |--output|性能分析结果的输出目录，该目录及其父目录的写权限不能开放给其他用户|否，如果不填，就输出在当前工作目录|
 |--launch-count|设置可以采集算子的最大数量，默认值为1，取值范围为1~100之间的整数。| 用户无需关注，不涉及|
 |--aic-metrics|使能算子性能指标采集。| 用户无需关注，不涉及|
 |--core-id|该参数适用于算子分布均匀的情况时，可使用--core-id参数指定部分逻辑核的id，解析部分核的仿真数据。| 用户无需关注，不涉及|
 |--timeout|该参数适用于数据量大且计算重复的算子，完整运行该类算子将会耗时很长，部分流水图即可获取必要信息。可通过设置--timeout参数缩短算子运行时长并获取必要流水信息| 用户无需关注，不涉及|
 |--mstx|该参数决定算子调优工具是否使能用户代码程序中使用的mstx API。| 用户无需关注，不涉及|
-|--mstx-include|该参数支持在msProf工具使能用户指定mstx API。|用户无需关注，不涉及|
+|--mstx-include|该参数支持在msopprof工具使能用户指定mstx API。|用户无需关注，不涉及|
 |--dump|控制仿真器dump文件是否生成。<br>选项包括开启（on）和关闭（off），默认情况下设置为关闭（off），即不生成仿真器dump文件。|用户无需关注，不涉及|
 |-h，--help|帮助信息|否|
 
-**备注1**:如果要使用--export选项，请删除ops/ascendc/AddKernelInvocation/run.sh最后一行清理的步骤，使用生成的./sim_log文件夹
+**备注1**:如果要使用--export选项，请删除ops/ascendc/AddKernelInvocation/run_sim.sh最后一行清理的步骤，使用生成的./sim_log文件夹
 
 
 
-msprof命令执行完毕后会有 **Profiling results saved in XXXX**的日志，切换到提示的目录，该目录下 **simulator/trace.json**即指令流水图
+msopprof命令执行完毕后会有 **Profiling results saved in XXXX**的日志，切换到提示的目录，该目录下 **simulator/trace.json**即指令流水图
 
 在Chrome浏览器中输入chrome://tracing，将生成的trace.json文件拖到空白处打开，界面会呈现trace图。通过键盘上的快捷键（w：放大，s：缩小，a：左移，d：右移）查看各字段含义如下：
 

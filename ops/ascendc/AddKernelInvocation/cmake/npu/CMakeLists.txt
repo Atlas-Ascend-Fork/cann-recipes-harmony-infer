@@ -2,6 +2,9 @@
 file(GLOB SRC_FILES
     ${CMAKE_SOURCE_DIR}/*.cpp
 )
+list(REMOVE_ITEM SRC_FILES ${CMAKE_SOURCE_DIR}/add_custom.cpp ${CMAKE_SOURCE_DIR}/add_custom_micro.cpp)
+list(APPEND SRC_FILES ${KERNEL_SRC})
+
 set_source_files_properties(${SRC_FILES} PROPERTIES LANGUAGE CCE)
 
 add_executable(${smoke_testcase}_npu

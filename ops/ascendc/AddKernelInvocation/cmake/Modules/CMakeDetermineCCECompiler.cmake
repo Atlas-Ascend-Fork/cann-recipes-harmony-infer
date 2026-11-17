@@ -34,7 +34,7 @@ if(DEFINED ASCEND_PRODUCT_TYPE)
     elseif(ASCEND_PRODUCT_TYPE AND NOT ASCEND_PRODUCT_TYPE MATCHES "^Kirin[a-zA-Z0-9]")
         message(FATAL_ERROR
             "ASCEND_PRODUCT_TYPE: ${ASCEND_PRODUCT_TYPE}\n"
-            "is not one of the following: KirinX90, Kirin9030"
+            "is not one of the following: KirinX90, Kirin9030, Kirin9020, Kirin9050"
         )
     elseif(ASCEND_PRODUCT_TYPE STREQUAL "KirinX90")
         if (ASCEND_CORE_TYPE STREQUAL "AiCore")
@@ -49,6 +49,18 @@ if(DEFINED ASCEND_PRODUCT_TYPE)
             set(_CMAKE_COMPILE_AS_CCE_FLAG "--cce-aicore-arch=dav-l311")
         elseif(ASCEND_CORE_TYPE STREQUAL "VectorCore")
             set(_CMAKE_COMPILE_AS_CCE_FLAG "--cce-aicore-arch=dav-l311-eff")
+        endif()
+        set(_CMAKE_CCE_COMPILE_OPTIONS
+            "-mllvm -cce-aicore-function-stack-size=16000 -mllvm -cce-aicore-record-overflow=false -mllvm -cce-aicore-addr-transform")
+    elseif(ASCEND_PRODUCT_TYPE STREQUAL "Kirin9020")
+        if (ASCEND_CORE_TYPE STREQUAL "AiCore")
+            set(_CMAKE_COMPILE_AS_CCE_FLAG "--cce-aicore-arch=dav-l310")
+        endif()
+        set(_CMAKE_CCE_COMPILE_OPTIONS
+            "-mllvm -cce-aicore-function-stack-size=16000 -mllvm -cce-aicore-record-overflow=false -mllvm -cce-aicore-addr-transform")
+    elseif(ASCEND_PRODUCT_TYPE STREQUAL "Kirin9050")
+        if (ASCEND_CORE_TYPE STREQUAL "AiCore")
+            set(_CMAKE_COMPILE_AS_CCE_FLAG "--cce-aicore-arch=dav-l510")
         endif()
         set(_CMAKE_CCE_COMPILE_OPTIONS
             "-mllvm -cce-aicore-function-stack-size=16000 -mllvm -cce-aicore-record-overflow=false -mllvm -cce-aicore-addr-transform")

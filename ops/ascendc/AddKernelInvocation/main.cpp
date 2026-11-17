@@ -29,7 +29,7 @@ int32_t main(int32_t argc, char* argv[])
     uint32_t blockDim = 1;
     size_t inputByteSize = 8 * 2048 * sizeof(uint16_t);
     size_t outputByteSize = 8 * 2048 * sizeof(uint16_t);
-    
+
 #ifdef ASCENDC_CPU_DEBUG
     // Kirin暂不支持该编译分支
     uint8_t* x = (uint8_t*)AscendC::GmAlloc(inputByteSize);
