@@ -18,6 +18,7 @@
 #include <hilog/log.h>
 #include <rawfile/raw_file_manager.h>
 #include "HIAIModelManager.h"
+#include "InferenceStatus.h"
 #include <cmath>
 #include <sstream>
 #include <iomanip>
@@ -171,6 +172,9 @@ static napi_value NAPI_Global_InitIOTensors(napi_env env, napi_callback_info inf
    
     std::vector<std::pair<uint8_t *, size_t>> inputData{ {bgrData, length} };
     OH_NN_ReturnCode ret = HIAIModelManager::GetInstance().InitIOTensors(inputData);
+    if (IsInferenceFailure(ret, OH_NN_SUCCESS)) {
+        return errorCode;
+    }
     
     return successCode;
 }
@@ -184,6 +188,9 @@ static napi_value NAPI_Global_RunModel(napi_env env, napi_callback_info info) {
     struct timeval start, end;
     gettimeofday(&start, NULL);
     OH_NN_ReturnCode ret = HIAIModelManager::GetInstance().RunModel();
+    if (IsInferenceFailure(ret, OH_NN_SUCCESS)) {
+        return errorCode;
+    }
   
     gettimeofday(&end, NULL);
     npuRunTime = (end.tv_sec - start.tv_sec) * 1000000.0 + (end.tv_usec - start.tv_usec);
