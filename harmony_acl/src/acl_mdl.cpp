@@ -277,7 +277,7 @@ aclError aclrtFree(void *devPtr)
 aclError aclrtMemset(void *devPtr, size_t maxCount, int32_t value, size_t count)
 {
     ACL_EXPECT_TRUE_R_WITH_LOG(devPtr != nullptr, ACL_ERROR_INVALID_PARAM, "the memset data is nullptr");
-    ACL_EXPECT_TRUE_R_WITH_LOG(maxCount > count, ACL_ERROR_INVALID_PARAM, "the memset is larger than max count");
+    ACL_EXPECT_TRUE_R_WITH_LOG(maxCount >= count, ACL_ERROR_INVALID_PARAM, "the memset is larger than max count");
     if (memset(devPtr, static_cast<size_t>(value),count) != devPtr)
     {
         ACL_LOGE("buffer memset failed");

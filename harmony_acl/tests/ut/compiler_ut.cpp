@@ -459,6 +459,30 @@ TEST_F(CompilerUT, MallocAndMemset)
     EXPECT_EQ(ret, ACL_SUCCESS);
 }
 
+TEST_F(CompilerUT, MemsetAllowsFullBuffer)
+{
+    void* ptr = nullptr;
+    constexpr size_t size = 8;
+    aclError ret = aclrtMalloc(&ptr, size, ACL_MEM_MALLOC_NORMAL_ONLY);
+    ASSERT_EQ(ACL_SUCCESS, ret);
+    ASSERT_NE(nullptr, ptr);
+
+    ret = aclrtMemset(ptr, size, 0x55, size);
+    EXPECT_EQ(ACL_SUCCESS, ret);
+    auto* bytes = static_cast<uint8_t*>(ptr);
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(0x55, bytes[i]);
+    }
+
+    ret = aclrtMemset(ptr, size - 1, 0x33, size);
+    EXPECT_EQ(ACL_ERROR_INVALID_PARAM, ret);
+    for (size_t i = 0; i < size; ++i) {
+        EXPECT_EQ(0x55, bytes[i]);
+    }
+
+    EXPECT_EQ(ACL_SUCCESS, aclrtFree(ptr));
+}
+
 TEST_F(CompilerUT, run_execute_dynamic)
 {
     aclmdlDataset* dataset = aclmdlCreateDataset();
