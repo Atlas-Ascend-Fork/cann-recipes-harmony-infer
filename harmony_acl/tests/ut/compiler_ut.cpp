@@ -41,6 +41,28 @@ public:
 public:
     std::string modelPath_ = "test/framework/ut/ascendcl/test.om";
     uint32_t modelId_ = 1;
+
+    ge::graphStatus BuildModelWithDeviceConfig(const nlohmann::json &config, aclmdlModel** model)
+    {
+        std::ofstream outFile("deviceconfig.json");
+        if (!outFile.is_open()) {
+            return ge::GRAPH_FAILED;
+        }
+        outFile << config.dump(4);
+        outFile.close();
+
+        std::string value1 = "input_0_0:16,32,208,208;input_1_0:16,64,208,208";
+        std::string value2 = "0";
+        std::string value3 = "fp16";
+        std::string value4 = "./deviceconfig.json";
+        std::map<AscendString, AscendString> buildOptions {
+            {ge::ir_option::INPUT_SHAPE, value1.c_str()},
+            {ge::ir_option::EXEC_DISABLE_REUSED_MEMORY, value2.c_str()},
+            {ge::ir_option::PRECISION_MODE_V2, value3.c_str()},
+            {ge::ir_option::EXEC_DEVICE_CONFIG_PATH, value4.c_str()}
+        };
+        return aclgrphBuildModelFromFile(modelPath_.c_str(), buildOptions, model);
+    }
 };
 
 TEST_F(CompilerUT, acl_repeat_init_fail)
@@ -230,32 +252,13 @@ TEST_F(CompilerUT, build_model_from_mem_success)
 /* 编译来自文件的模型，有设备选项配置 */
 TEST_F(CompilerUT, build_model_from_file_with_deviceconfig)
 {
-    std::string value1 = "input_0_0:16,32,208,208;input_1_0:16,64,208,208";
-    std::string value2 = "0";
-    std::string value3 = "fp16";
-    std::string value4 = "./deviceconfig.json";
     nlohmann::json j;
     j["DeviceConfigMode"] = "MODEL_LEVEL";
     j["ModelExecuteDevice"] = "NPU";
-    std::ofstream outFile("deviceconfig.json");
-    if (outFile.is_open()) {
-        outFile << j.dump(4); // 将JSON对象转换为字符串并写入文件，缩进4个空格
-        outFile.close();
-        std::cout << "JSON data written to example.json" << std::endl;
-    } else {
-        std::cout << "Failed to open file for writing" << std::endl;
-    }
-    std::map<AscendString, AscendString> buildOptions {
-        {ge::ir_option::INPUT_SHAPE, value1.c_str()},
-        {ge::ir_option::EXEC_DISABLE_REUSED_MEMORY, value2.c_str()},
-        {ge::ir_option::PRECISION_MODE_V2, value3.c_str()},
-        {ge::ir_option::EXEC_DEVICE_CONFIG_PATH, value4.c_str()}
-    };
-    
     aclmdlModel model = nullptr;
     aclmdlModel* p = &model;
     aclmdlModel** ptr = &p;
-    auto ret = aclgrphBuildModelFromFile(modelPath_.c_str(), buildOptions, ptr);
+    auto ret = BuildModelWithDeviceConfig(j, ptr);
     EXPECT_EQ(ge::GRAPH_SUCCESS, ret);
     ret = aclgrphDestroyModel(p);
     EXPECT_EQ(ge::GRAPH_SUCCESS, ret);
@@ -263,38 +266,45 @@ TEST_F(CompilerUT, build_model_from_file_with_deviceconfig)
 
 TEST_F(CompilerUT, build_model_from_file_with_opconfig)
 {
-    std::string value1 = "input_0_0:16,32,208,208;input_1_0:16,64,208,208";
-    std::string value2 = "0";
-    std::string value3 = "fp16";
-    std::string value4 = "./deviceconfig.json";
     nlohmann::json j;
     j["DeviceConfigMode"] = "OP_LEVEL";
     nlohmann::json op1;
     op1["OpName"] = "Reshape";
     op1["ExecuteDevice"] = "NPU:CPU";
     j["OpExecuteDevice"].push_back(op1);
-    std::ofstream outFile("deviceconfig.json");
-    if (outFile.is_open()) {
-        outFile << j.dump(4); // 将JSON对象转换为字符串并写入文件，缩进4个空格
-        outFile.close();
-        std::cout << "JSON data written to example.json" << std::endl;
-    } else {
-        std::cout << "Failed to open file for writing" << std::endl;
-    }
-    std::map<AscendString, AscendString> buildOptions {
-        {ge::ir_option::INPUT_SHAPE, value1.c_str()},
-        {ge::ir_option::EXEC_DISABLE_REUSED_MEMORY, value2.c_str()},
-        {ge::ir_option::PRECISION_MODE_V2, value3.c_str()},
-        {ge::ir_option::EXEC_DEVICE_CONFIG_PATH, value4.c_str()}
-    };
-    
+    nlohmann::json op2;
+    op2["OpName"] = "Cast";
+    op2["ExecuteDevice"] = "GPU";
+    j["OpExecuteDevice"].push_back(op2);
     aclmdlModel model = nullptr;
     aclmdlModel* p = &model;
     aclmdlModel** ptr = &p;
-    auto ret = aclgrphBuildModelFromFile(modelPath_.c_str(), buildOptions, ptr);
+    auto ret = BuildModelWithDeviceConfig(j, ptr);
     EXPECT_EQ(ge::GRAPH_SUCCESS, ret);
+    auto compilation = reinterpret_cast<OH_NNCompilation*>(model);
+    EXPECT_EQ(2U, HMS_HiAIOptions_GetOperatorDeviceCount(compilation, "Reshape"));
+    auto reshapeDevices = HMS_HiAIOptions_GetOperatorDeviceOrder(compilation, "Reshape");
+    ASSERT_NE(nullptr, reshapeDevices);
+    EXPECT_EQ(HIAI_EXECUTE_DEVICE_NPU, reshapeDevices[0]);
+    EXPECT_EQ(HIAI_EXECUTE_DEVICE_CPU, reshapeDevices[1]);
+    EXPECT_EQ(1U, HMS_HiAIOptions_GetOperatorDeviceCount(compilation, "Cast"));
+    auto castDevices = HMS_HiAIOptions_GetOperatorDeviceOrder(compilation, "Cast");
+    ASSERT_NE(nullptr, castDevices);
+    EXPECT_EQ(HIAI_EXECUTE_DEVICE_GPU, castDevices[0]);
     ret = aclgrphDestroyModel(p);
     EXPECT_EQ(ge::GRAPH_SUCCESS, ret);
+}
+
+TEST_F(CompilerUT, build_model_from_file_with_empty_opconfig_fail)
+{
+    nlohmann::json j;
+    j["DeviceConfigMode"] = "OP_LEVEL";
+    j["OpExecuteDevice"] = nlohmann::json::array();
+    aclmdlModel model = nullptr;
+    aclmdlModel* p = &model;
+    aclmdlModel** ptr = &p;
+    auto ret = BuildModelWithDeviceConfig(j, ptr);
+    EXPECT_EQ(ge::GRAPH_FAILED, ret);
 }
 
 TEST_F(CompilerUT, load_model_from_file_fail)

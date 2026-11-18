@@ -14,6 +14,7 @@
 #ifndef STUB_NDK_HIAI_FOUNDATION_HIAI_NDK_STRUCT_DEF_H
 #define STUB_NDK_HIAI_FOUNDATION_HIAI_NDK_STRUCT_DEF_H
 
+#include <string>
 #include <vector>
 #include "hiai_foundation/hiai_aipp_param.h"
 #include "hiai_foundation/hiai_options.h"
@@ -120,9 +121,8 @@ struct AippParaStub {
 };
 
 struct OpDeviceOrder {
-    const char* operatorName {nullptr};
-    HiAI_ExecuteDevice* executeDevices {nullptr};
-    size_t deviceCount {0};  
+    std::string operatorName;
+    std::vector<HiAI_ExecuteDevice> executeDevices;
 };
 
 typedef struct HiAI_NativeHandle HiAI_NativeHandle;
@@ -140,8 +140,7 @@ struct HiAIOptions {
     HiAI_DynamicShapeCacheMode mode {HIAI_DYNAMIC_SHAPE_CACHE_BUILT_MODEL};
     std::vector<OpDeviceOrder> opDeviceOrder;
 
-    HiAI_ExecuteDevice* executeDevices {nullptr};
-    size_t deviceCount {0};
+    std::vector<HiAI_ExecuteDevice> executeDevices;
     HiAI_FallbackMode fallbackMode {HIAI_FALLBACK_ENABLED};
     HiAI_DeviceMemoryReusePlan deviceMemoryReusePlan {HIAI_DEVICE_MEMORY_REUSE_PLAN_UNSET};
     HiAI_TuningStrategy tuningStrategy {HIAI_TUNING_STRATEGY_OFF};

@@ -15,6 +15,7 @@
 
 #include <type_traits>
 #include <string>
+#include <utility>
 #include <vector>
 #include <mutex>
 #include <fstream>
@@ -32,46 +33,75 @@
 using namespace ge;
 using namespace hiai;
 
-void parseOpLevelJsonFile(const nlohmann::json &j, std::unordered_map<std::string, HiAI_ExecuteDevice> &deviceMap)
+aclError ParseExecuteDeviceOrder(const std::string &deviceNames, std::vector<HiAI_ExecuteDevice> &devices)
 {
-    //op_level模式
-    ACL_EXPECT_TRUE_VOID(j.contains("OpExecuteDevice") && j["OpExecuteDevice"].is_array());
+    for (const auto &deviceName : StringUtils::Split(deviceNames, ':'))
+    {
+        if (deviceName == "NPU")
+        {
+            devices.push_back(HIAI_EXECUTE_DEVICE_NPU);
+        } else if (deviceName == "GPU")
+        {
+            devices.push_back(HIAI_EXECUTE_DEVICE_GPU);
+        } else if (deviceName == "CPU")
+        {
+            devices.push_back(HIAI_EXECUTE_DEVICE_CPU);
+        } else
+        {
+            ACL_LOGE("Invalid execute device: [%s]", deviceName.c_str());
+            return ACL_ERROR_INVALID_PARAM;
+        }
+    }
+    return devices.empty() ? ACL_ERROR_INVALID_PARAM : ACL_SUCCESS;
+}
+
+aclError parseOpLevelJsonFile(const nlohmann::json &j,
+    std::unordered_map<std::string, std::vector<HiAI_ExecuteDevice>> &deviceMap)
+{
+    if (!j.contains("OpExecuteDevice") || !j["OpExecuteDevice"].is_array() ||
+        j["OpExecuteDevice"].empty())
+    {
+        return ACL_ERROR_INVALID_PARAM;
+    }
     for (const auto& op : j["OpExecuteDevice"])
     {
-        if (op.contains("OpName") && op.contains("ExecuteDevice"))
+        if (!op.is_object() || !op.contains("OpName") || !op["OpName"].is_string() ||
+            !op.contains("ExecuteDevice") || !op["ExecuteDevice"].is_string())
         {
-            if (op["ExecuteDevice"].get<std::string>() == "NPU")
-            {
-                deviceMap.emplace(op["OpName"].get<std::string>(), HIAI_EXECUTE_DEVICE_NPU);
-            } else if (op["ExecuteDevice"].get<std::string>() == "GPU")
-            {
-                deviceMap.emplace(op["OpName"].get<std::string>(), HIAI_EXECUTE_DEVICE_GPU);
-            } else if (op["ExecuteDevice"].get<std::string>() == "CPU")
-            {
-                deviceMap.emplace(op["OpName"].get<std::string>(), HIAI_EXECUTE_DEVICE_CPU);
-            }
+            return ACL_ERROR_INVALID_PARAM;
+        }
+
+        std::string opName = op["OpName"].get<std::string>();
+        std::vector<HiAI_ExecuteDevice> devices;
+        aclError ret = ParseExecuteDeviceOrder(op["ExecuteDevice"].get<std::string>(), devices);
+        if (ret != ACL_SUCCESS || opName.empty() || !deviceMap.emplace(opName, std::move(devices)).second)
+        {
+            return ACL_ERROR_INVALID_PARAM;
         }
     }
+    return ACL_SUCCESS;
 }
 
-void parseModelLevelJsonFile(const nlohmann::json &j, std::unordered_map<std::string, HiAI_ExecuteDevice> &deviceMap)
+aclError parseModelLevelJsonFile(const nlohmann::json &j,
+    std::unordered_map<std::string, std::vector<HiAI_ExecuteDevice>> &deviceMap)
 {
-    //model_level模式
-    if (j.contains("ModelExecuteDevice") && j["ModelExecuteDevice"].is_string())
+    if (!j.contains("ModelExecuteDevice") || !j["ModelExecuteDevice"].is_string())
     {
-        if (j["ModelExecuteDevice"].get<std::string>() == "NPU")
-        {
-            deviceMap.emplace("default_model_op", HIAI_EXECUTE_DEVICE_NPU);
-        } else if (j["ModelExecuteDevice"].get<std::string>() == "GPU")
-        {
-            deviceMap.emplace("default_model_op", HIAI_EXECUTE_DEVICE_GPU);
-        } else if (j["ModelExecuteDevice"].get<std::string>() == "CPU") {
-            deviceMap.emplace("default_model_op", HIAI_EXECUTE_DEVICE_CPU);
-        }
+        return ACL_ERROR_INVALID_PARAM;
     }
+
+    std::vector<HiAI_ExecuteDevice> devices;
+    aclError ret = ParseExecuteDeviceOrder(j["ModelExecuteDevice"].get<std::string>(), devices);
+    if (ret != ACL_SUCCESS)
+    {
+        return ret;
+    }
+    deviceMap.emplace("default_model_op", std::move(devices));
+    return ACL_SUCCESS;
 }
 
-aclError parseJsonFile(const std::string& filename, std::unordered_map<std::string, HiAI_ExecuteDevice>& deviceMap)
+aclError parseJsonFile(const std::string& filename,
+    std::unordered_map<std::string, std::vector<HiAI_ExecuteDevice>>& deviceMap)
 {
     try
     {
@@ -101,10 +131,10 @@ aclError parseJsonFile(const std::string& filename, std::unordered_map<std::stri
 
         if (j["DeviceConfigMode"] == "OP_LEVEL")
         {
-            parseOpLevelJsonFile(j, deviceMap);
+            return parseOpLevelJsonFile(j, deviceMap);
         } else if (j["DeviceConfigMode"] == "MODEL_LEVEL")
         {
-            parseModelLevelJsonFile(j, deviceMap);
+            return parseModelLevelJsonFile(j, deviceMap);
         } else
         {
             ACL_LOGE("Invalid DeviceConfigMode value: [%s]", j["DeviceConfigMode"].get<std::string>().c_str());
@@ -432,18 +462,18 @@ aclError ACLManager::BuildModel(OH_NNCompilation *compilation, const std::map<As
         if (pair.first == ge::ir_option::EXEC_DEVICE_CONFIG_PATH)
         {
             std::string filename = pair.second.GetString();
-            std::unordered_map<string, HiAI_ExecuteDevice> deviceMap;
-            auto result = parseJsonFile(filename, deviceMap);
+            std::unordered_map<string, std::vector<HiAI_ExecuteDevice>> deviceMap;
+            ret = parseJsonFile(filename, deviceMap);
+            ACL_EXPECT_TRUE_WITH_LOG(ret == ACL_SUCCESS, "parse device config is fail");
             for (auto& pair : deviceMap)
             {
-                HiAI_ExecuteDevice* device = &(pair.second);
+                auto& devices = pair.second;
                 if (pair.first == "default_model_op")
                 {
-                    ret = HIAI_NDK_HiAIOptions_SetModelDeviceOrder(compilation, device, deviceMap.size());
-                    break;
+                    ret = HIAI_NDK_HiAIOptions_SetModelDeviceOrder(compilation, devices.data(), devices.size());
                 } else {
-                    ret = HIAI_NDK_HiAIOptions_SetOperatorDeviceOrder(compilation, pair.first.c_str(), device, deviceMap.size());
-
+                    ret = HIAI_NDK_HiAIOptions_SetOperatorDeviceOrder(compilation, pair.first.c_str(),
+                        devices.data(), devices.size());
                 }
                 ACL_EXPECT_TRUE_WITH_LOG(ret == ACL_SUCCESS, "set device config is fail");
             }

@@ -113,12 +113,12 @@ OH_NN_ReturnCode HMS_HiAIOptions_SetOperatorDeviceOrder(OH_NNCompilation* compil
     ACL_EXPECT_TRUE_R(compilation != nullptr && operatorName != nullptr && std::string(operatorName) != "" &&
         executeDevices != nullptr && deviceCount != 0, OH_NN_INVALID_PARAMETER);
     for (size_t i = 0; i < deviceCount; i++) {
-        ACL_EXPECT_TRUE_R(executeDevices[i] > HIAI_EXECUTE_DEVICE_NPU, OH_NN_INVALID_PARAMETER);
+        ACL_EXPECT_TRUE_R(executeDevices[i] >= HIAI_EXECUTE_DEVICE_NPU &&
+            executeDevices[i] <= HIAI_EXECUTE_DEVICE_GPU, OH_NN_INVALID_PARAMETER);
     }
     OpDeviceOrder opDeviceOrder;
     opDeviceOrder.operatorName = operatorName;
-    opDeviceOrder.executeDevices = executeDevices;
-    opDeviceOrder.deviceCount = deviceCount;
+    opDeviceOrder.executeDevices.assign(executeDevices, executeDevices + deviceCount);
     GetHiAIOptions(compilation)->opDeviceOrder.push_back(opDeviceOrder);
     return OH_NN_SUCCESS;
 }
@@ -126,10 +126,10 @@ OH_NN_ReturnCode HMS_HiAIOptions_SetOperatorDeviceOrder(OH_NNCompilation* compil
 size_t HMS_HiAIOptions_GetOperatorDeviceCount(const OH_NNCompilation* compilation, const char* operatorName)
 {
     ACL_EXPECT_TRUE_R(compilation != nullptr && operatorName != nullptr && std::string(operatorName) != "", 0);
-    std::vector<OpDeviceOrder> opDeviceOrder = GetHiAIOptions(compilation)->opDeviceOrder;
+    const auto& opDeviceOrder = GetHiAIOptions(compilation)->opDeviceOrder;
     for (size_t i = 0; i < opDeviceOrder.size(); i++) {
         if (std::string(operatorName) == std::string(opDeviceOrder[i].operatorName)) {
-            return opDeviceOrder[i].deviceCount;
+            return opDeviceOrder[i].executeDevices.size();
         }
     }
     return 0;
@@ -138,10 +138,10 @@ size_t HMS_HiAIOptions_GetOperatorDeviceCount(const OH_NNCompilation* compilatio
 HiAI_ExecuteDevice* HMS_HiAIOptions_GetOperatorDeviceOrder(const OH_NNCompilation* compilation, const char* operatorName)
 {
     ACL_EXPECT_TRUE_R(compilation != nullptr && operatorName != nullptr && std::string(operatorName) != "", nullptr);
-    std::vector<OpDeviceOrder> opDeviceOrder = GetHiAIOptions(compilation)->opDeviceOrder;
+    const auto& opDeviceOrder = GetHiAIOptions(compilation)->opDeviceOrder;
     for (size_t i = 0; i < opDeviceOrder.size(); i++) {
         if (std::string(operatorName) == std::string(opDeviceOrder[i].operatorName)) {
-            return opDeviceOrder[i].executeDevices;
+            return const_cast<HiAI_ExecuteDevice*>(opDeviceOrder[i].executeDevices.data());
         }
     }
     return nullptr;
@@ -151,23 +151,23 @@ OH_NN_ReturnCode HMS_HiAIOptions_SetModelDeviceOrder(OH_NNCompilation* compilati
 {
     ACL_EXPECT_TRUE_R(compilation != nullptr && executeDevices != nullptr && deviceCount != 0, OH_NN_INVALID_PARAMETER);
     for (size_t i = 0; i < deviceCount; i++) {
-        ACL_EXPECT_TRUE_R(executeDevices[i] > HIAI_EXECUTE_DEVICE_NPU, OH_NN_INVALID_PARAMETER);
+        ACL_EXPECT_TRUE_R(executeDevices[i] >= HIAI_EXECUTE_DEVICE_NPU &&
+            executeDevices[i] <= HIAI_EXECUTE_DEVICE_GPU, OH_NN_INVALID_PARAMETER);
     }
-    GetHiAIOptions(compilation)->executeDevices = executeDevices;
-    GetHiAIOptions(compilation)->deviceCount = deviceCount;
+    GetHiAIOptions(compilation)->executeDevices.assign(executeDevices, executeDevices + deviceCount);
     return OH_NN_SUCCESS;
 }
 
 size_t HMS_HiAIOptions_GetModelDeviceCount(const OH_NNCompilation* compilation)
 {
     ACL_EXPECT_NOT_NULL_R(compilation, 0);
-    return GetHiAIOptions(compilation)->deviceCount;
+    return GetHiAIOptions(compilation)->executeDevices.size();
 }
 
 HiAI_ExecuteDevice* HMS_HiAIOptions_GetModelDeviceOrder(const OH_NNCompilation* compilation)
 {
     ACL_EXPECT_NOT_NULL_R(compilation, nullptr);
-    return GetHiAIOptions(compilation)->executeDevices;
+    return const_cast<HiAI_ExecuteDevice*>(GetHiAIOptions(compilation)->executeDevices.data());
 }
 
 OH_NN_ReturnCode HMS_HiAIOptions_SetFallbackMode(OH_NNCompilation* compilation, HiAI_FallbackMode fallbackMode)
