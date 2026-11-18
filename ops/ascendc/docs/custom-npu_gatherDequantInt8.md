@@ -31,6 +31,8 @@ $$
 scale_v = \frac{\max(W_v) - \min(W_v)}{255}, \quad zp_v = \frac{-\min(W_v)}{scale_v}, \quad q_{v} = \mathrm{round}(W_v / scale_v + zp_v)
 $$
 
+当一行embedding为常数、`max(W_v) = min(W_v)`时，上式的scale为零，需要单独处理。本样例使用`max(abs(min(W_v)) / 255, np.finfo(np.float16).tiny)`作为该行scale，再按上式计算zero_point和q。这样写入fp16文件的scale保持非零、zero_point保持有限，常数行的golden不会因`Inf * 0`产生NaN。
+
 # 算子规格描述
 
 | 名称        | 角色 | 数据类型 | 维度      | 说明 |

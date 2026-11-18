@@ -33,7 +33,11 @@ def quantize_embedding(weight: np.ndarray):
     vmin = weight.min(axis=1)
     vmax = weight.max(axis=1)
     scale = (vmax - vmin) / 255.0
-    scale[scale == 0] = 1e-8
+    constant_rows = scale == 0
+    # Keep constant-row scale and zero point representable in fp16.
+    scale[constant_rows] = np.maximum(
+        np.abs(vmin[constant_rows]) / 255.0, np.finfo(np.float16).tiny
+    )
     zp = -vmin / scale
     q = np.clip(np.round(weight / scale[:, None] + zp[:, None]), 0, 255).astype(np.uint8)
     return q, scale.astype(np.float16), zp.astype(np.float16)
