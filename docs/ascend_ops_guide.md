@@ -67,7 +67,10 @@ source ${install_path}/cann/set_env.sh
 ```bash
 # 克隆ops-math仓库
 git clone https://gitcode.com/cann/ops-math.git
+cd ops-math
 ```
+
+以下依赖安装、编译和样例命令均在 `ops-math` 仓库根目录执行；该目录提供 `install_deps.sh`、`requirements.txt` 和 `build.sh`。
 
 
 ---
