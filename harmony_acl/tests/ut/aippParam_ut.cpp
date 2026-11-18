@@ -19,6 +19,9 @@
 using namespace testing;
 using namespace hiai;
 
+extern "C" void HMS_Test_SetAippParamsResult(OH_NN_ReturnCode result);
+extern "C" size_t HMS_Test_GetAippParamDestroyCount();
+
 namespace Unittest::AscendclTest {
 namespace {
 constexpr uint32_t BATCH_NUM = 3;
@@ -26,6 +29,29 @@ constexpr uint32_t BATCH_NUM = 3;
 
 class AscendclAippUT : public testing::Test {
 public:
+    void CreateDatasetWithAipp(uint32_t& modelId, aclmdlDataset*& input, aclmdlDataset*& output,
+        std::vector<uint8_t>& inputData, std::vector<uint8_t>& outputData, aclmdlAIPP*& aippParam)
+    {
+        uint8_t modelData = 0;
+        ASSERT_EQ(ACL_SUCCESS, aclmdlLoadFromMem(&modelData, sizeof(modelData), &modelId));
+
+        input = aclmdlCreateDataset();
+        output = aclmdlCreateDataset();
+        ASSERT_NE(nullptr, input);
+        ASSERT_NE(nullptr, output);
+        inputData.resize(1 * 3 * 64 * 64 * sizeof(float));
+        outputData.resize(200);
+        ASSERT_EQ(ACL_SUCCESS, aclmdlAddDatasetBuffer(input,
+            aclCreateDataBuffer(inputData.data(), inputData.size())));
+        ASSERT_EQ(ACL_SUCCESS, aclmdlAddDatasetBuffer(output,
+            aclCreateDataBuffer(outputData.data(), outputData.size())));
+
+        aippParam = aclmdlCreateAIPP(1);
+        ASSERT_NE(nullptr, aippParam);
+        ASSERT_EQ(ACL_SUCCESS, aclmdlSetAIPPSrcImageSize(aippParam, 64, 64));
+        ASSERT_EQ(ACL_SUCCESS, aclmdlSetAIPPByInputIndex(modelId, input, 0, aippParam));
+    }
+
     void SetUp()
     {
         std::string configPath = "";
@@ -36,6 +62,7 @@ public:
 
     void TearDown()
     {
+        HMS_Test_SetAippParamsResult(OH_NN_SUCCESS);
         aclmdlDestroyAIPP(aippParam_);
         aippParam_ = nullptr;
         auto ret = aclFinalize();
@@ -150,6 +177,49 @@ TEST_F(AscendclAippUT, aippParam_getsize)
     auto retCode = aclmdlGetAippDataSize(batchSize, &size);
     EXPECT_EQ(ACL_SUCCESS, retCode);
     EXPECT_EQ(232, size);
+}
+
+TEST_F(AscendclAippUT, aippParam_setter_failure_keeps_dataset_owner)
+{
+    const size_t destroyCount = HMS_Test_GetAippParamDestroyCount();
+    uint32_t modelId = 0;
+    aclmdlDataset* input = nullptr;
+    aclmdlDataset* output = nullptr;
+    std::vector<uint8_t> inputData;
+    std::vector<uint8_t> outputData;
+    aclmdlAIPP* aippParam = nullptr;
+    CreateDatasetWithAipp(modelId, input, output, inputData, outputData, aippParam);
+
+    HMS_Test_SetAippParamsResult(OH_NN_FAILED);
+    EXPECT_EQ(ACL_ERROR_INVALID_PARAM, aclmdlExecute(modelId, input, output));
+    HMS_Test_SetAippParamsResult(OH_NN_SUCCESS);
+    EXPECT_EQ(destroyCount, HMS_Test_GetAippParamDestroyCount());
+
+    EXPECT_EQ(ACL_SUCCESS, aclmdlDestroyDataset(input));
+    EXPECT_EQ(destroyCount + 1, HMS_Test_GetAippParamDestroyCount());
+    EXPECT_EQ(ACL_SUCCESS, aclmdlDestroyDataset(output));
+    EXPECT_EQ(ACL_SUCCESS, aclmdlUnload(modelId));
+}
+
+TEST_F(AscendclAippUT, aippParam_setter_success_keeps_dataset_owner)
+{
+    const size_t destroyCount = HMS_Test_GetAippParamDestroyCount();
+    uint32_t modelId = 0;
+    aclmdlDataset* input = nullptr;
+    aclmdlDataset* output = nullptr;
+    std::vector<uint8_t> inputData;
+    std::vector<uint8_t> outputData;
+    aclmdlAIPP* aippParam = nullptr;
+    CreateDatasetWithAipp(modelId, input, output, inputData, outputData, aippParam);
+
+    HMS_Test_SetAippParamsResult(OH_NN_SUCCESS);
+    EXPECT_EQ(ACL_SUCCESS, aclmdlExecute(modelId, input, output));
+    EXPECT_EQ(destroyCount, HMS_Test_GetAippParamDestroyCount());
+
+    EXPECT_EQ(ACL_SUCCESS, aclmdlDestroyDataset(input));
+    EXPECT_EQ(destroyCount + 1, HMS_Test_GetAippParamDestroyCount());
+    EXPECT_EQ(ACL_SUCCESS, aclmdlDestroyDataset(output));
+    EXPECT_EQ(ACL_SUCCESS, aclmdlUnload(modelId));
 }
 
 /* set非法的scf config */

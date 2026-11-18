@@ -16,6 +16,15 @@
 #include "hiai_ndk_struct_def.h"
 
 static size_t TENSOR_SIZE = 100;
+namespace {
+OH_NN_ReturnCode aippParamsResult = OH_NN_SUCCESS;
+}
+
+extern "C" void HMS_Test_SetAippParamsResult(OH_NN_ReturnCode result)
+{
+    aippParamsResult = result;
+}
+
 size_t HMS_HiAITensor_GetSizeWithImageFormat(NN_TensorDesc* desc, HiAI_ImageFormat format)
 {
     (void) format;
@@ -26,6 +35,9 @@ size_t HMS_HiAITensor_GetSizeWithImageFormat(NN_TensorDesc* desc, HiAI_ImageForm
 OH_NN_ReturnCode HMS_HiAITensor_SetAippParams(NN_Tensor* tensor, HiAI_AippParam* aippParams[], size_t aippNum)
 {
     ACL_EXPECT_TRUE_R(tensor != nullptr && aippParams != nullptr && aippNum != 0, OH_NN_FAILED);
+    if (aippParamsResult != OH_NN_SUCCESS) {
+        return aippParamsResult;
+    }
     NNTensor* nnTensor = reinterpret_cast<NNTensor*>(tensor);
     nnTensor->aippParams.clear();
     for (size_t i = 0; i < aippNum; ++i) {

@@ -681,10 +681,6 @@ aclError PrepareAippModelInputs(OH_NNExecutor* executor, const aclmdlDataset *in
     if (ret != ACL_SUCCESS)
     {
         ACL_LOGE("SetAippParams failed");
-        for (size_t i = 0; i < aippConfig.size(); ++i)
-        {
-            HIAI_NDK_HiAIAippParam_Destroy(&(aippConfig[i]));
-        }
         return ACL_ERROR_FAILURE;
     }
     return ACL_SUCCESS;

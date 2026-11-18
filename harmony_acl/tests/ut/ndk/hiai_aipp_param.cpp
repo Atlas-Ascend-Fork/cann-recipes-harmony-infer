@@ -16,6 +16,15 @@
 
 #include "utils/assert.h"
 
+namespace {
+size_t aippParamDestroyCount = 0;
+}
+
+extern "C" size_t HMS_Test_GetAippParamDestroyCount()
+{
+    return aippParamDestroyCount;
+}
+
 HiAI_AippParam* HMS_HiAIAippParam_Create(uint32_t batchNum)
 {
     ACL_EXPECT_TRUE_R(batchNum > 0 && batchNum <= 127, nullptr);
@@ -73,6 +82,7 @@ OH_NN_ReturnCode HMS_HiAIAippParam_SetInputAippIndex(HiAI_AippParam* aippParam, 
 void HMS_HiAIAippParam_Destroy(HiAI_AippParam** aippParam)
 {
     if (aippParam != nullptr && *aippParam != nullptr) {
+        ++aippParamDestroyCount;
         AippParaStub* aipp = reinterpret_cast<AippParaStub*>(*aippParam);
         delete aipp;
         *aippParam = nullptr;
@@ -340,5 +350,4 @@ OH_NN_ReturnCode HMS_HiAIAippParam_GetDtcVarReciPixel(HiAI_AippParam* aippParam,
     }
     return OH_NN_SUCCESS;
 }
-
 
