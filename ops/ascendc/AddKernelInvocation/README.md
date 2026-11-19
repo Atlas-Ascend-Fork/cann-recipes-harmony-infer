@@ -6,7 +6,7 @@
 │   ├── output                  // 存放算子运行输出数据和真实数据的目录
 │   ├── scripts
 │   │   ├── acl.json            // acl配置文件
-│   │   ├── gen_data.py         // 验证输出数据和针织数据是否一致的验证脚本
+│   │   ├── gen_data.py         // 验证输出数据和真值数据是否一致的验证脚本
 │   │   ├── verify_result.py    // 真值对比文件
 │   │── add_custom.cpp          // 算子kernel实现，暴露给main.cpp调用
 │   │── CMakeLists.txt          // 编译工程文件

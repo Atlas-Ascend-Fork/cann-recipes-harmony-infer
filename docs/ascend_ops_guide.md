@@ -53,7 +53,7 @@ chmod +x Ascend-cann-${soc_name}-ops_${cann_version}_linux-${arch}.run
 #### 1.1.4配置环境变量
 
 ```bash
-source ${install_path}/cann/set_env.sh
+source ${install_path}/cann/set_env.sh  # cann 为 cann-${cann_version} 的软链，二者等价
 ```
 
 
@@ -125,10 +125,10 @@ bash build.sh --pkg --soc=KirinX90 --ops=is_finite -j16
 
 ```bash
 # 解压安装包
-./Ascend-cann-toolkit_9.0.0_linux-x86_64-mobile-station.run --tar xvf -C ./path
+./Ascend-cann-toolkit_9.2.0_linux-x86_64-mobile-station.run --tar xvf -C ./path
 # 安装bisheng编译器
 cd ./path/run_package/
-./cann-bisheng-compiler_9.0.0_linux-x86_64.run --full --quiet --install-path=${install_path}
+./cann-bisheng-compiler_9.2.0_linux-x86_64.run --full --quiet --install-path=${install_path}
 ```
 
 

@@ -114,8 +114,8 @@ deal_after_download() {
     cd ..
 }
 
-# 这里替换为command-line-tools在自己环境上的目录
-CMD_LINE_TOOLS_DIR=/home/sizel/test/command-line-tools
+# 必须修改：将下面的占位路径替换为本机 command-line-tools 的实际解压目录（见 README 前置条件）
+CMD_LINE_TOOLS_DIR="/path/to/command-line-tools"   # TODO: 改成自己的真实路径
 
 OHOS_SDK=${CMD_LINE_TOOLS_DIR}/sdk/default/openharmony/
 OHOS_INC_DIR=${OHOS_SDK}/native/sysroot/usr/include/

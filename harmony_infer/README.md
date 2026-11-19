@@ -8,8 +8,6 @@
 ├── harmony_infer                               # 鸿蒙设备推理
 |  ├── harmony_os_next                          # 鸿蒙next版本推理应用工程
 |  |  ├── Sobel                                 # Sobel边缘检测应用工程
-|  ├── harmony_next                             # 鸿蒙版本推理应用工程
-|  |  ├──  ... 
 |  ├── README.md
 └── ...
 ```

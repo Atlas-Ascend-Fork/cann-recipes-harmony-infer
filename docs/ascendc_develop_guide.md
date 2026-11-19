@@ -683,7 +683,7 @@ def gen_data_simple():
 
 ## NPU仿真模式下的精度校验与性能采集分析
 基于NPU域算子的调用接口编写的算子程序，通过毕昇编译器编译后生成可执行程序，运行可执行程序，可以完成算子NPU域的运行验证。使用算子调优工具运行NPU模式下生成的可执行文件从而采集Ascend C算子在AI处理器上执行的性能数据，进行性能精细调优。
-当前，Kirin支持的芯片型号为KirinX90, Kirin9020, Kirin9030, Kirin9050，支持分析的类型为为仿真器，支持的场景为Kernel直调场景，关于Kernel直调场景的详情请参考 [Kernel直调说明](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.htmld)。
+当前，Kirin支持的芯片型号为KirinX90, Kirin9020, Kirin9030, Kirin9050，支持分析的类型为为仿真器，支持的场景为Kernel直调场景，关于Kernel直调场景的详情请参考 [Kernel直调说明](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0056.html)。
 ### 精度校验
 样例参考本仓 ops/ascendc/AddKernelInvocation/ 目录
 该工程的编译、执行参考 [样例工程下的README](../ops/ascendc/AddKernelInvocation/README.md)

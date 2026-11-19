@@ -33,21 +33,21 @@
 ├── docs
 ├── ops
 │   ├── ascendc
-│   │   ├── KernelInvocationSample
+│   │   ├── AddKernelInvocation 
 │   │   ├── docs
 │   │   │   ├── custom-npu_slice_gelu.md                         # slice_gelu算子资料
 │   │   ├── src
 │   │   │   ├── slice_gelu_custom                                # 算子源码工程目录
 │   │   │   │   ├── cmake
 │   │   │   │   ├── framework
-│   │   │   │   │   ├── onnx_pulgin
+│   │   │   │   │   ├── onnx_plugin
 │   │   │   │   ├── op_host
 │   │   │   │   ├── op_kernel
-│   │   │   │   ├── scripts
-│   │   │   │   ├── build.sh
+│   │   │   │   ├── test
+│   │   │   │   ├── build_and_install.sh
 │   │   │   │   ├── CMakeLists.txt
 │   │   │   │   ├── CMakePresets.json
-│   │   │   ├── READEME.md                                       # 算子编译执行文档
+│   │   │   ├── README.md                                       # 算子编译执行文档
 ```
 ### 3. 提交 PR，完善交付内容
 方案达成共识且代码开发完成后，请提交 PR 并关联 RFC Issue。PR 内容需包含：
