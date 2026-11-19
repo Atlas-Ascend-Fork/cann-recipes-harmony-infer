@@ -12,6 +12,7 @@
 # limitations under the License.
 #!/usr/bin/python3
 # coding=utf-8
+import os
 import sys
 import numpy as np
 
@@ -22,6 +23,12 @@ error_tol = 1e-3
 
 
 def verify_result(output, golden):
+    output_bytes = os.path.getsize(output)
+    golden_bytes = os.path.getsize(golden)
+    element_bytes = np.dtype(np.float16).itemsize
+    if golden_bytes == 0 or output_bytes != golden_bytes or golden_bytes % element_bytes:
+        print("[ERROR] output and golden must have equal, nonzero float16 element counts")
+        return False
     output = np.fromfile(output, dtype=np.float16).reshape(-1)
     golden = np.fromfile(golden, dtype=np.float16).reshape(-1)
     different_element_results = np.isclose(output,
