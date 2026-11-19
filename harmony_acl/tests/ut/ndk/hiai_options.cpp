@@ -31,12 +31,21 @@ const HiAIOptions* GetHiAIOptions(const OH_NNCompilation* compilation)
 OH_NN_ReturnCode HMS_HiAIOptions_SetInputTensorShapes(OH_NNCompilation* compilation, NN_TensorDesc* inputTensorDescs[] , size_t shapeCount)
 {
     ACL_EXPECT_TRUE_R(compilation != nullptr && inputTensorDescs != nullptr && shapeCount > 0, OH_NN_INVALID_PARAMETER);
+    HiAIOptions *options = GetHiAIOptions(compilation);
+    options->inputShapeSnapshots.clear();
     for (size_t i = 0; i < shapeCount; i++) {
         ACL_EXPECT_TRUE_R(inputTensorDescs[i] != nullptr, OH_NN_INVALID_PARAMETER);
+        options->inputShapeSnapshots.push_back(GetType<NNTensorDesc>(inputTensorDescs[i])->shape);
     }
-    GetHiAIOptions(compilation)->inputTensorDescs = inputTensorDescs;
-    GetHiAIOptions(compilation)->shapeCount = shapeCount;
+    options->inputTensorDescs = inputTensorDescs;
+    options->shapeCount = shapeCount;
     return OH_NN_SUCCESS;
+}
+ 
+std::vector<std::vector<int32_t>> HIAI_UT_GetInputTensorShapeSnapshots(const OH_NNCompilation* compilation)
+{
+    ACL_EXPECT_NOT_NULL_R(compilation, {});
+    return GetHiAIOptions(compilation)->inputShapeSnapshots;
 }
 
 size_t HMS_HiAIOptions_GetInputTensorShapeSize(const OH_NNCompilation* compilation)

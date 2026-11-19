@@ -134,6 +134,7 @@ typedef void (*onFree) (void* userData, HiAI_NativeHandle* handles[], size_t han
 struct HiAIOptions {
     size_t shapeCount {0};
     NN_TensorDesc** inputTensorDescs {nullptr};
+    std::vector<std::vector<int32_t>> inputShapeSnapshots;
     HiAI_FormatMode formatMode {HIAI_FORMAT_MODE_NCHW};
     HiAI_DynamicShapeStatus status {HIAI_DYNAMIC_SHAPE_DISABLED};
     size_t maxCacheCount {0};

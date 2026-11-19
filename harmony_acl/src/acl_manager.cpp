@@ -19,6 +19,7 @@
 #include <vector>
 #include <mutex>
 #include <fstream>
+#include <set>
 
 #include <nlohmann/json.hpp>
 
@@ -229,9 +230,10 @@ aclError WriteBufferToFile(const void* data, uint32_t size, const char* file)
     return ACL_SUCCESS;
 }
 
-aclError ParseInputShape(const string& inputShape, std::unordered_map<string, std::vector<int32_t>> &shapeMap)
+aclError ParseInputShape(const string& inputShape, std::vector<std::pair<string, std::vector<int32_t>>>& shapeList)
 {
     std::vector<string> shapeVec = StringUtils::Split(inputShape, ';');
+    std::set<string> shapeNames;
     for (const auto& shape : shapeVec)
     {
         std::vector<string> shapePairVec = StringUtils::Split(shape, ':');
@@ -266,12 +268,15 @@ aclError ParseInputShape(const string& inputShape, std::unordered_map<string, st
             shapeValues.push_back(result);
         }
         std::string shapeName = StringUtils::Trim(shapePairVec[0]);
-        if (shapeMap.find(shapeName) != shapeMap.end())
+        if (shapeNames.find(shapeName) != shapeNames.end())
         {
             ACL_LOGE("input node name is repeated, node name: %s", shapeName.c_str());
             return ACL_ERROR_FAILURE;
         }
-        shapeMap.emplace(shapeName, shapeValues);
+        shapeNames.emplace(shapeName);
+        // The NNRt API consumes input shape descriptors by model input index.
+        // Preserve the user's input order instead of iterating an unordered map.
+        shapeList.emplace_back(shapeName, std::move(shapeValues));
     }
     return ACL_SUCCESS;
 }
@@ -346,9 +351,10 @@ aclError SetCompilationPrecisionConfig(OH_NNCompilation *compilation, std::strin
     return ACL_SUCCESS;
 }
 
-aclError CreateTensorWithShape (std::unordered_map<string, std::vector<int32_t>> &shapeMap, std::vector<NN_TensorDesc*>& inputDescs)
+aclError CreateTensorWithShape (
+    const std::vector<std::pair<string, std::vector<int32_t>>>& shapeList, std::vector<NN_TensorDesc*>& inputDescs)
 {
-    for (const auto& pairShape : shapeMap)
+    for (const auto& pairShape : shapeList)
     {
         NN_TensorDesc* tensorDesc = HIAI_NDK_NNTensorDesc_Create();
         OH_NN_DataType dataType = OH_NN_FLOAT32;
@@ -434,14 +440,14 @@ aclError ACLManager::BuildModel(OH_NNCompilation *compilation, const std::map<As
         {
             std::string optionShape = pair.second.GetString();
             std::vector<NN_TensorDesc*> inputDescs;
-            std::unordered_map<string, std::vector<int32_t>> shapeMap;
-            aclError parseRet = ParseInputShape(optionShape, shapeMap);
+            std::vector<std::pair<string, std::vector<int32_t>>> shapeList;
+            aclError parseRet = ParseInputShape(optionShape, shapeList);
             if (parseRet != ACL_SUCCESS)
             {
                 ACL_LOGE("ParseInputShape failed for optionShape");
                 return parseRet;
             }
-            aclError createRet = CreateTensorWithShape(shapeMap, inputDescs);
+            aclError createRet = CreateTensorWithShape(shapeList, inputDescs);
             ACL_EXPECT_TRUE_WITH_LOG(createRet == ACL_SUCCESS, "create tensor with shape is fail");
             aclError shapeConfigRet = SetCompilationShapeConfig(compilation, inputDescs);
             ACL_EXPECT_TRUE_WITH_LOG(shapeConfigRet == ACL_SUCCESS, "set compilation shape config is fail");

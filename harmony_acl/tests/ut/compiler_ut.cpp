@@ -23,6 +23,8 @@
 using namespace testing;
 using namespace hiai;
 
+std::vector<std::vector<int32_t>> HIAI_UT_GetInputTensorShapeSnapshots(const OH_NNCompilation *compilation);
+
 namespace Unittest::AscendclTest {
 class CompilerUT : public testing::Test {
 public:
@@ -70,6 +72,27 @@ TEST_F(CompilerUT, acl_repeat_init_fail)
     std::string configPath = "";
     auto ret = aclInit(configPath.c_str());
     EXPECT_EQ(ACL_ERROR_REPEAT_INITIALIZE, ret);
+}
+
+TEST_F(CompilerUT, input_shape_descriptors_follow_option_order)
+{
+    const std::vector<std::vector<int32_t>> expectedShapes {
+        {1, 3, 224, 224}, {1, 16, 112, 112}, {1, 64, 56, 56}
+    };
+    const std::string optionShape =
+        "input_0_0:1,3,224,224;input_1_0:1,16,112,112;input_2_0:1,64,56,56";
+    char modelData = 0;
+    OH_NNCompilation *compilation = HIAI_NDK_NNCompilation_ConstructWithOfflineModelBuffer(&modelData, sizeof(modelData));
+    ASSERT_NE(nullptr, compilation);
+    ACLManager manager;
+    std::map<AscendString, AscendString> buildOptions {
+        {ge::ir_option::INPUT_SHAPE, optionShape.c_str()}
+    };
+    auto ret = manager.BuildModel(compilation, buildOptions);
+    ASSERT_EQ(ACL_SUCCESS, ret);
+
+    EXPECT_EQ(expectedShapes, HIAI_UT_GetInputTensorShapeSnapshots(compilation));
+    HIAI_NDK_NNCompilation_Destroy(&compilation);
 }
 
 TEST_F(CompilerUT, acl_init_and_finalize_fail)
