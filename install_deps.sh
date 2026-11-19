@@ -279,9 +279,11 @@ install_ccache() {
 
     echo "Installing ccache..."
     case "$OS" in
-        debian|rhel)
-            apt_ver=$(apt list caache -a 2>&1 | awk 'NR ==5 {print $2}')
-            if version_ge "$req_ver" "$apt_ver"; then
+        debian)
+            local apt_ver
+            apt_ver=$(LC_ALL=C apt-cache policy ccache | awk '/^[[:space:]]*Candidate:/ {print $2; exit}')
+            if [ -z "$apt_ver" ] || [ "$apt_ver" = "(none)" ] ||
+                ! dpkg --compare-versions "${apt_ver#*:}" ge "$req_ver"; then
                 echo "The ccache version provided by apt is too old. Please install it manually:"
                 echo "1. Download source: wget https://github.com/ccache/ccache/releases/download/v4.8.2/ccache-4.8.2.tar.gz"
                 echo "2. Extract and compile: tar -zxf ccache-4.8.2.tar.gz && cd ccache-4.8.2 && mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Release .. && make && sudo make install"
@@ -289,10 +291,17 @@ install_ccache() {
             fi
             run_command $SUDO $PKG_MANAGER install -y ccache
             ;;
+        rhel)
+            run_command $SUDO $PKG_MANAGER install -y ccache
+            ;;
     esac
 
     if command -v ccache &> /dev/null; then
-        curr_ver=$(ccache --version 2>&1 | head -n 1 | awk '{print $2}')
+        curr_ver=$(ccache --version 2>&1 | head -n 1 | awk '{print $3}')
+        if ! version_ge "$curr_ver" "$req_ver"; then
+            echo "ccache version $curr_ver is below required $req_ver. Please install it manually."
+            exit 1
+        fi
         echo "ccache installed successfully ($curr_ver)"
     else
         echo "ccache installation failed, can be ignored"
